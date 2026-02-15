@@ -15,6 +15,8 @@ constexpr const auto WstrTextRO { L"Random data: RO" };
 constexpr const auto WstrTextRW { L"Random data: RW" };
 
 BEGIN_MESSAGE_MAP(CMFCDialogDlg, CDialogEx)
+	ON_MESSAGE(WM_DPICHANGED, &CMFCDialogDlg::OnDPIChanged)
+	ON_MESSAGE(WM_GETDPISCALEDSIZE, &CMFCDialogDlg::OnGetDPIScaledSize)
 	ON_WM_CLOSE()
 	ON_BN_CLICKED(IDC_SETDATARND, &CMFCDialogDlg::OnBnSetRndData)
 	ON_BN_CLICKED(IDC_CLEARDATA, &CMFCDialogDlg::OnBnClearData)
@@ -61,15 +63,15 @@ BOOL CMFCDialogDlg::OnInitDialog()
 	m_pHexDlg->CreateDialogCtrl(IDC_MY_HEX, m_hWnd);
 	m_pHexDlg->SetScrollRatio(2, true); //Two lines scroll with mouse-wheel.
 	m_pHexDlg->SetPageSize(64);
-	//	m_pHexDlg->SetDlgProperties(EHexWnd::DLG_CODEPAGE, HEXCTRL_FLAG_DLG_NOESC);
-	//	m_pHexDlg->SetCharsExtraSpace(2);
+	//m_pHexDlg->SetDlgProperties(EHexWnd::DLG_CODEPAGE, HEXCTRL_FLAG_DLG_NOESC);
+	//m_pHexDlg->SetCharsExtraSpace(2);
 
 	LoadTemplates(&*m_pHexDlg);
 	//OnBnSetRndData();
 	//m_pHexDlg->ExecuteCmd(EHexCmd::CMD_BKM_DLG_MGR);
 
-//	m_hds.pHexVirtColors = this;
-//	m_hds.fHighLatency = true;
+	//m_hds.pHexVirtColors = this;
+	//m_hds.fHighLatency = true;
 
 	m_chkLnk.SetCheck(BST_CHECKED);
 
@@ -207,6 +209,11 @@ void CMFCDialogDlg::OnClose()
 	CDialogEx::OnClose();
 }
 
+auto CMFCDialogDlg::OnDPIChanged(WPARAM /*wParam*/, LPARAM /*lParam*/)->LRESULT
+{
+	return 0;
+}
+
 void CMFCDialogDlg::OnDropFiles(HDROP hDropInfo)
 {
 	PVOID pOldValue;
@@ -223,6 +230,17 @@ void CMFCDialogDlg::OnDropFiles(HDROP hDropInfo)
 
 	CDialogEx::OnDropFiles(hDropInfo);
 	Wow64RevertWow64FsRedirection(pOldValue);
+}
+
+auto CMFCDialogDlg::OnGetDPIScaledSize(WPARAM /*wParam*/, LPARAM /*lParam*/)->LRESULT
+{
+	//Returning FALSE indicates that the message will not be handled,
+	//and the default linear DPI scaling will apply to the window.
+
+	//It seems that it's just enough for all MFC dynamic layout controls to move/resize correctly.
+	//No manual disabling/enabling of the dynamic layout is needed, looks like MFC handles it by itself.
+	//At least in Windows 11 it works fine.
+	return FALSE;
 }
 
 BOOL CMFCDialogDlg::OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult)

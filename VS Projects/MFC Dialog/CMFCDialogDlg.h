@@ -21,7 +21,9 @@ private:
 	afx_msg void OnBnFileOpen();
 	afx_msg void OnBnClearData();
 	afx_msg void OnClose();
+	auto OnDPIChanged(WPARAM wParam, LPARAM lParam) -> LRESULT;
 	afx_msg void OnDropFiles(HDROP hDropInfo);
+	auto OnGetDPIScaledSize(WPARAM wParam, LPARAM lParam) -> LRESULT;
 	BOOL OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult)override;
 	afx_msg void OnBnPopup();
 	afx_msg void OnChkRW();
