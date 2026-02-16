@@ -317,7 +317,7 @@ namespace HEXCTRL::INTERNAL {
 		[[nodiscard]] auto CopyOffset()const -> std::wstring;
 		[[nodiscard]] auto CopyPrintScreen()const -> std::wstring;
 		[[nodiscard]] auto CopyTextCP()const -> std::wstring;
-		void CreateMenuIcons();
+		void CreateMenu();
 		void CreatePens();
 		void DrawWindow(HDC hDC)const;
 		void DrawInfoBar(HDC hDC)const;
@@ -466,7 +466,7 @@ namespace HEXCTRL::INTERNAL {
 		std::vector<std::unique_ptr<std::vector<UNDO>>> m_vecUndo; //Undo data.
 		std::vector<std::unique_ptr<std::vector<UNDO>>> m_vecRedo; //Redo data.
 		std::vector < std::unique_ptr < std::remove_pointer_t<HBITMAP>,
-			decltype([](HBITMAP hBmp) { ::DeleteObject(hBmp); }) >> m_vecHBITMAP; //Icons for the Menu.
+			decltype([](HBITMAP hBmp) { ::DeleteObject(hBmp); }) >> m_vecIconsMenu; //Icons for the Menu.
 		std::vector<KEYBIND> m_vecKeyBind;    //Vector of key bindings.
 		std::vector<int> m_vecCharsWidth;     //Vector of chars widths.
 		HFONT m_hFntMain { };                 //Main Hex chunks font.
@@ -673,13 +673,8 @@ bool CHexCtrl::Create(const HEXCREATE& hcs)
 	m_fInfoBar = hcs.fInfoBar;
 	m_fOffsetHex = hcs.fOffsetHex;
 
-	if (!m_MenuMain.LoadMenuW(m_hInstRes, IDR_HEXCTRL_MENU)) {
-		ut::DBG_REPORT(L"LoadMenuW failed.");
-		return false;
-	}
-
 	SetDPIScale();
-	CreateMenuIcons();
+	CreateMenu();
 	CreatePens();
 
 	//Default main font.
@@ -2640,13 +2635,16 @@ auto CHexCtrl::CopyTextCP()const->std::wstring
 	return wstrText;
 }
 
-void CHexCtrl::CreateMenuIcons()
+void CHexCtrl::CreateMenu()
 {
 	if (!m_MenuMain.IsMenu()) {
-		return;
+		if (!m_MenuMain.LoadMenuW(m_hInstRes, IDR_HEXCTRL_MENU)) {
+			ut::DBG_REPORT(L"LoadMenuW failed.");
+			return;
+		}
 	}
 
-	m_vecHBITMAP.clear();
+	m_vecIconsMenu.clear();
 	const auto iSizeIcon = static_cast<int>(16 * GetDPIScale());
 	const auto menuTop = m_MenuMain.GetSubMenu(0); //Context sub-menu handle.
 
@@ -2656,51 +2654,51 @@ void CHexCtrl::CreateMenuIcons()
 
 	menuTop.SetItemBitmap(0, hBmp, false); //"Search" parent menu icon.
 	m_MenuMain.SetItemBitmap(IDM_HEXCTRL_SEARCH_DLGSEARCH, hBmp);
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 
 	//"Group Data" menu icon.
 	hBmp = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_GROUP), IMAGE_BITMAP,
 		iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
 	menuTop.SetItemBitmap(2, hBmp, false); //"Group Data" parent menu icon.
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 
 	//"Bookmarks->Add" menu icon.
 	hBmp = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_BKMS), IMAGE_BITMAP,
 		iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
 	menuTop.SetItemBitmap(4, hBmp, false); //"Bookmarks" parent menu icon.
 	m_MenuMain.SetItemBitmap(IDM_HEXCTRL_BKM_ADD, hBmp);
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 
 	//"Clipboard->Copy as Hex" menu icon.
 	hBmp = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_CLPBRD_COPYHEX), IMAGE_BITMAP,
 		iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
 	menuTop.SetItemBitmap(5, hBmp, false); //"Clipboard" parent menu icon.
 	m_MenuMain.SetItemBitmap(IDM_HEXCTRL_CLPBRD_COPYHEX, hBmp);
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 
 	//"Clipboard->Paste as Hex" menu icon.
 	hBmp = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_CLPBRD_PASTEHEX), IMAGE_BITMAP,
 		iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
 	m_MenuMain.SetItemBitmap(IDM_HEXCTRL_CLPBRD_PASTEHEX, hBmp);
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 
 	//"Modify" parent menu icon.
 	hBmp = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_MODIFY), IMAGE_BITMAP,
 		iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
 	menuTop.SetItemBitmap(6, hBmp, false);
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 
 	//"Modify->Fill with Zeros" menu icon.
 	hBmp = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_MODIFY_FILLZEROS), IMAGE_BITMAP,
 		iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
 	m_MenuMain.SetItemBitmap(IDM_HEXCTRL_MODIFY_FILLZEROS, hBmp);
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 
 	//"Appearance->Choose Font" menu icon.
 	hBmp = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_FONTCHOOSE), IMAGE_BITMAP,
 		iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
 	m_MenuMain.SetItemBitmap(IDM_HEXCTRL_APPEAR_DLGFONT, hBmp);
-	m_vecHBITMAP.emplace_back(hBmp);
+	m_vecIconsMenu.emplace_back(hBmp);
 }
 
 void CHexCtrl::CreatePens()
@@ -4139,7 +4137,7 @@ auto CHexCtrl::OnDestroy()->LRESULT
 	m_DlgSearch.DestroyDlg();
 	m_DlgTemplMgr.DestroyDlg();
 	m_DlgTemplMgr.UnloadAll(); //Templates could be loaded without creating the dialog itself.
-	m_vecHBITMAP.clear();
+	m_vecIconsMenu.clear();
 	m_vecKeyBind.clear();
 	m_vecUndo.clear();
 	m_vecRedo.clear();
@@ -4168,7 +4166,7 @@ auto CHexCtrl::OnDPIChangedAfterParent()->LRESULT
 	//Invoke all DPI dependent routines, with the new DPI.
 	SetFontSizeInPoints(lFontPointsMain, true);
 	SetFontSizeInPoints(lFontPointsInfo, false);
-	CreateMenuIcons();
+	CreateMenu();
 	m_ScrollV.OnDPIChangedAfterParent();
 	m_ScrollH.OnDPIChangedAfterParent();
 

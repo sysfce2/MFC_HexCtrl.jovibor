@@ -971,10 +971,9 @@ auto CHexDlgTemplMgr::OnMouseMove(const MSG& msg)->INT_PTR
 	constexpr auto iWidthBetweenTreeAndList = 1; //Width between tree and list after resizing.
 	constexpr auto iMinTreeWidth = 100;          //Tree control minimum allowed width.
 	static const auto hCurResize = static_cast<HCURSOR>(::LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, 0, 0, LR_SHARED));
-	static const auto hCurArrow = static_cast<HCURSOR>(::LoadImageW(nullptr, IDC_ARROW, IMAGE_CURSOR, 0, 0, LR_SHARED));
 	const POINT pt { .x { ut::GetXLPARAM(msg.lParam) }, .y { ut::GetYLPARAM(msg.lParam) } };
-	const auto hWndList = GDIUT::CWnd::FromHandle(m_ListEx.GetHWND());
-	auto rcList = hWndList.GetWindowRect();
+	const auto wndList = GDIUT::CWnd::FromHandle(m_ListEx.GetHWND());
+	auto rcList = wndList.GetWindowRect();
 	m_Wnd.ScreenToClient(rcList);
 
 	if (m_fLMDownResize) {
@@ -986,7 +985,7 @@ auto CHexDlgTemplMgr::OnMouseMove(const MSG& msg)->INT_PTR
 			auto hdwp = ::BeginDeferWindowPos(2); //Simultaneously resizing list and tree.
 			hdwp = ::DeferWindowPos(hdwp, m_WndTree, nullptr, rcTree.left, rcTree.top,
 				rcTree.Width(), rcTree.Height(), SWP_NOACTIVATE | SWP_NOZORDER);
-			hdwp = ::DeferWindowPos(hdwp, hWndList, nullptr, rcList.left, rcList.top,
+			hdwp = ::DeferWindowPos(hdwp, wndList, nullptr, rcList.left, rcList.top,
 				rcList.Width(), rcList.Height(), SWP_NOACTIVATE | SWP_NOZORDER);
 			::EndDeferWindowPos(hdwp);
 		}
@@ -1001,7 +1000,6 @@ auto CHexDlgTemplMgr::OnMouseMove(const MSG& msg)->INT_PTR
 		}
 		else {
 			m_fCurInSplitter = false;
-			::SetCursor(hCurArrow);
 			::ReleaseCapture();
 		}
 	}
