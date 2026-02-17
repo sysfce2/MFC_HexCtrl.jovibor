@@ -1219,8 +1219,8 @@ auto CHexDlgSearch::OnInitDialog(const MSG& msg)->INT_PTR
 	iIndex = m_WndCmbMode.AddString(L"Structs");
 	m_WndCmbMode.SetItemData(iIndex, static_cast<DWORD_PTR>(ESearchMode::MODE_STRUCT));
 
-	m_ListEx.Create({ .hWndParent { m_Wnd }, .uID { IDC_HEXCTRL_SEARCH_LIST }, .dwSizeFontList { 10 },
-		.dwSizeFontHdr { 10 }, .fDialogCtrl { true } });
+	m_ListEx.Create({ .hWndParent { m_Wnd }, .uID { IDC_HEXCTRL_SEARCH_LIST }, .flSizeFontList { 10.F },
+		.flSizeFontHdr { 10.F }, .fDialogCtrl { true } });
 	m_ListEx.SetExtendedStyle(LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT);
 	m_ListEx.InsertColumn(0, L"№", LVCFMT_LEFT, 50);
 	m_ListEx.InsertColumn(1, L"Offset", LVCFMT_LEFT, 455);

@@ -134,18 +134,18 @@ export namespace HEXCTRL::LISTEX {
 		const LOGFONTW* pLFList { };             //CListEx LOGFONT.
 		const LOGFONTW* pLFHdr { };              //Header LOGFONT.
 		RECT            rect { };                //Initial rect.
+		POINT           ptTTOffset { .x { 3 }, .y { -20 } }; //Tooltip offset from a cursor pos. Doesn't work for TTS_BALLOON.
 		UINT            uID { };                 //CListEx Control ID.
 		DWORD           dwStyle { };             //Window styles.
 		DWORD           dwExStyle { };           //Extended window styles.
-		DWORD           dwSizeFontList { 9 };    //List font default size in logical points.
-		DWORD           dwSizeFontHdr { 9 };     //Header font default size in logical points.
 		DWORD           dwTTStyleCell { };       //Cell's tooltip Window styles.
 		DWORD           dwTTStyleLink { };       //Link's tooltip Window styles.
 		DWORD           dwTTDelayTime { };       //Tooltip delay before showing up, in ms.
 		DWORD           dwTTShowTime { 5000 };   //Tooltip show up time, in ms.
 		DWORD           dwGridWidth { 1 };       //Width of the list grid.
 		DWORD           dwHdrHeight { };         //Header height.
-		POINT           ptTTOffset { .x { 3 }, .y { -20 } }; //Tooltip offset from a cursor pos. Doesn't work for TTS_BALLOON.
+		float           flSizeFontList { 9.F };  //List font size in logical points.
+		float           flSizeFontHdr { 9.F };   //Header font size in logical points.
 		bool            fDialogCtrl { false };   //If it's a list within dialog?
 		bool            fSortable { false };     //Is list sortable, by clicking on the header column?
 		bool            fLinks { false };        //Enable links support.
@@ -195,16 +195,16 @@ namespace HEXCTRL::LISTEX::GDIUT {
 		return static_cast<float>(::GetDpiForWindow(hWnd)) / USER_DEFAULT_SCREEN_DPI; //High-DPI scale factor for window.
 	}
 
-	//Get font points size from the size in pixels.
-	[[nodiscard]] constexpr auto FontPointsFromPixels(float flSizePixels) -> float {
+	//Get GDI font size in points from the size in pixels.
+	[[nodiscard]] auto FontPointsFromPixels(long iSizePixels) -> float {
 		constexpr auto flPointsInPixel = 72.F / USER_DEFAULT_SCREEN_DPI;
-		return flSizePixels * flPointsInPixel;
+		return std::abs(iSizePixels) * flPointsInPixel;
 	}
 
-	//Get font pixels size from the size in points.
-	[[nodiscard]] constexpr auto FontPixelsFromPoints(float flSizePoints) -> float {
+	//Get GDI font size in pixels from the size in points.
+	[[nodiscard]] auto FontPixelsFromPoints(float flSizePoints) -> long {
 		constexpr auto flPixelsInPoint = USER_DEFAULT_SCREEN_DPI / 72.F;
-		return flSizePoints * flPixelsInPoint;
+		return std::lround(flSizePoints * flPixelsInPoint);
 	}
 
 	class CPoint final : public POINT {
@@ -406,7 +406,7 @@ namespace HEXCTRL::LISTEX {
 		void SetColumnIcon(int iColumn, const LISTEXHDRICON& stIcon);
 		void SetColumnSortable(int iColumn, bool fSortable);
 		void SetColumnEditable(int iColumn, bool fEditable);
-		void SetDPIScale();
+		void UpdateDPIScale();
 		void SetFont(const LOGFONTW& lf);
 		void SetHeight(DWORD dwHeight);
 		void SetImageList(HIMAGELIST pList, int iList = HDSIL_NORMAL);
@@ -432,12 +432,10 @@ namespace HEXCTRL::LISTEX {
 		void AddColumnData(const COLUMNDATA& data);
 		[[nodiscard]] UINT ColumnIndexToID(int iIndex)const; //Returns unique column ID. Must be > 0.
 		[[nodiscard]] int ColumnIDToIndex(UINT uID)const;
-		[[nodiscard]] auto FontPointsFromScaledPixels(float flSizePixels)const -> float;
-		[[nodiscard]] auto FontPointsFromScaledPixels(long iSizePixels)const -> long;
-		[[nodiscard]] auto FontScaledPixelsFromPoints(float flSizePoints)const -> float;
-		[[nodiscard]] auto FontScaledPixelsFromPoints(long iSizePoints)const -> long;
+		[[nodiscard]] auto FontPointsFromScaledPixels(long iSizePixels)const -> float;  //Get font size in points from size in scaled pixels.
+		[[nodiscard]] auto FontScaledPixelsFromPoints(float flSizePoints)const -> long; //Get font size in scaled pixels from size in points.
 		[[nodiscard]] auto GetDPIScale()const -> float;
-		[[nodiscard]] long GetFontSize()const;
+		[[nodiscard]] long GetFontSizeInPixels()const;
 		[[nodiscard]] auto GetParent() -> HWND;
 		[[nodiscard]] auto GetHdrColor(UINT ID)const -> PLISTEXCOLOR;
 		[[nodiscard]] auto GetColumnData(UINT uID) -> COLUMNDATA*;
@@ -458,7 +456,7 @@ namespace HEXCTRL::LISTEX {
 		auto OnPaint() -> LRESULT;
 		auto OnRButtonUp(const MSG& msg) -> LRESULT;
 		auto OnRButtonDown(const MSG& msg) -> LRESULT;
-		void SetFontSize(long iSizePoints);
+		void SetFontSizeInPoints(float flSizePoints);
 		static auto CALLBACK SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
 			UINT_PTR uIDSubclass, DWORD_PTR dwRefData)->LRESULT;
 	private:
@@ -811,7 +809,7 @@ void CListExHdr::SubclassHeader(HWND hWndHeader)
 	assert(hWndHeader != nullptr);
 	::SetWindowSubclass(hWndHeader, SubclassProc, reinterpret_cast<UINT_PTR>(this), 0);
 	m_hWnd = hWndHeader;
-	SetDPIScale();
+	UpdateDPIScale();
 }
 
 
@@ -844,24 +842,12 @@ int CListExHdr::ColumnIDToIndex(UINT uID)const
 	return -1;
 }
 
-auto CListExHdr::FontPointsFromScaledPixels(float flSizePixels)const->float
-{
-	return GDIUT::FontPointsFromPixels(flSizePixels) / GetDPIScale();
+auto CListExHdr::FontPointsFromScaledPixels(long iSizePixels)const->float {
+	return GDIUT::FontPointsFromPixels(iSizePixels) / GetDPIScale();
 }
 
-auto CListExHdr::FontPointsFromScaledPixels(long iSizePixels)const->long
-{
-	return std::lround(FontPointsFromScaledPixels(static_cast<float>(iSizePixels)));
-}
-
-auto CListExHdr::FontScaledPixelsFromPoints(float flSizePoints)const->float
-{
-	return GDIUT::FontPixelsFromPoints(flSizePoints) * GetDPIScale();
-}
-
-auto CListExHdr::FontScaledPixelsFromPoints(long iSizePoints)const->long
-{
-	return std::lround(FontScaledPixelsFromPoints(static_cast<float>(iSizePoints)));
+auto CListExHdr::FontScaledPixelsFromPoints(float flSizePoints)const->long {
+	return std::lround(GDIUT::FontPixelsFromPoints(flSizePoints) * GetDPIScale());
 }
 
 auto CListExHdr::GetDPIScale()const->float
@@ -869,7 +855,7 @@ auto CListExHdr::GetDPIScale()const->float
 	return m_flDPIScale;
 }
 
-long CListExHdr::GetFontSize() const
+long CListExHdr::GetFontSizeInPixels() const
 {
 	LOGFONTW lf { };
 	::GetObjectW(m_hFntHdr, sizeof(lf), &lf);
@@ -962,13 +948,12 @@ auto CListExHdr::OnDPIChangedAfterParent()->LRESULT
 {
 	const auto flScaleOld = GetDPIScale();
 	//Take the current font size, in points, with the old DPI.
-	const auto lFontSizePoints = FontPointsFromScaledPixels(-GetFontSize());
+	const auto flFontSizePoints = FontPointsFromScaledPixels(GetFontSizeInPixels());
 
-	SetDPIScale(); //Set new DPI scale.
-	const auto flScaleNew = GetDPIScale();
-	const auto flRatio = flScaleNew / flScaleOld;
+	UpdateDPIScale(); //Set new DPI scale.
+	const auto flRatio = GetDPIScale() / flScaleOld;
 
-	SetFontSize(lFontSizePoints);
+	SetFontSizeInPoints(flFontSizePoints);
 	SetHeight(std::lround(GetHeight() * flRatio));
 
 	//Adjust columns width.
@@ -1224,22 +1209,22 @@ auto CListExHdr::OnRButtonUp(const MSG& msg)->LRESULT
 	return GDIUT::DefSubclassProc(msg);
 }
 
-void CListExHdr::SetDPIScale()
-{
-	m_flDPIScale = GDIUT::GetDPIScaleForHWND(m_hWnd);
-}
-
-void CListExHdr::SetFontSize(long iSizePoints)
+void CListExHdr::SetFontSizeInPoints(float flSizePoints)
 {
 	//Prevent font size from being too small or too big.
-	if (iSizePoints < 4 || iSizePoints > 64) {
+	if (flSizePoints < 4.F || flSizePoints > 64.F) {
 		return;
 	}
 
 	LOGFONTW lf { };
 	::GetObjectW(m_hFntHdr, sizeof(lf), &lf);
-	lf.lfHeight = -FontScaledPixelsFromPoints(iSizePoints);
+	lf.lfHeight = -FontScaledPixelsFromPoints(flSizePoints);
 	SetFont(lf);
+}
+
+void CListExHdr::UpdateDPIScale()
+{
+	m_flDPIScale = GDIUT::GetDPIScaleForHWND(m_hWnd);
 }
 
 auto CListExHdr::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
@@ -1337,11 +1322,9 @@ namespace HEXCTRL::LISTEX {
 	private:
 		struct ITEMDATA;
 		bool EditInPlaceShow(bool fShow = true);
-		[[nodiscard]] long GetFontSize()const;
-		[[nodiscard]] auto FontPointsFromScaledPixels(float flSizePixels)const -> float;
-		[[nodiscard]] auto FontPointsFromScaledPixels(long iSizePixels)const -> long;
-		[[nodiscard]] auto FontScaledPixelsFromPoints(float flSizePoints)const -> float;
-		[[nodiscard]] auto FontScaledPixelsFromPoints(long iSizePoints)const -> long;
+		[[nodiscard]] long GetFontSizeInPixels()const;
+		[[nodiscard]] auto FontPointsFromScaledPixels(long iSizePixels)const -> float;  //Get font size in points from size in scaled pixels.
+		[[nodiscard]] auto FontScaledPixelsFromPoints(float flSizePoints)const -> long; //Get font size in scaled pixels from size in points.
 		void FontSizeIncDec(bool fInc);
 		[[nodiscard]] auto GetCustomColor(int iItem, int iSubItem)const -> std::optional<LISTEXCOLOR>;
 		[[nodiscard]] auto GetDPIScale()const -> float;
@@ -1368,8 +1351,8 @@ namespace HEXCTRL::LISTEX {
 		auto OnVScroll(const MSG& msg) -> LRESULT;
 		auto ParseItemData(int iItem, int iSubitem) -> std::vector<ITEMDATA>;
 		void RecalcMeasure()const;
-		void SetDPIScale(); //Set new DPI scale factor according to current DPI.
-		void SetFontSize(long iSizePoints);
+		void UpdateDPIScale(); //Set new DPI scale factor according to current DPI.
+		void SetFontSizeInPoints(float flSizePoints);
 		void TTCellShow(bool fShow, bool fTimer = false);
 		void TTLinkShow(bool fShow, bool fTimer = false);
 		void TTHLShow(bool fShow, UINT uRow); //Tooltips for high latency mode.
@@ -1546,20 +1529,20 @@ bool CListEx::Create(const LISTEXCREATE& lcs)
 		::SendMessageW(m_hWndRowTT, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ttiHL));
 	}
 
-	SetDPIScale();
+	UpdateDPIScale();
 
 	NONCLIENTMETRICSW ncm { .cbSize { sizeof(NONCLIENTMETRICSW) } };
 	::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0); //Get System Default UI Font.
 
 	//List font.
-	ncm.lfMessageFont.lfHeight = -FontScaledPixelsFromPoints(static_cast<long>(lcs.dwSizeFontList));
+	ncm.lfMessageFont.lfHeight = -FontScaledPixelsFromPoints(lcs.flSizeFontList);
 	LOGFONTW lfList { lcs.pLFList != nullptr ? *lcs.pLFList : ncm.lfMessageFont };
 	m_hFntList = ::CreateFontIndirectW(&lfList);
 	lfList.lfUnderline = TRUE;
 	m_hFntListUnderline = ::CreateFontIndirectW(&lfList);
 
 	//Header font.
-	ncm.lfMessageFont.lfHeight = -FontScaledPixelsFromPoints(static_cast<long>(lcs.dwSizeFontHdr));
+	ncm.lfMessageFont.lfHeight = -FontScaledPixelsFromPoints(lcs.flSizeFontHdr);
 	const auto lfHdr { lcs.pLFHdr != nullptr ? *lcs.pLFHdr : ncm.lfMessageFont };
 
 	//Header height.
@@ -1800,7 +1783,7 @@ auto CListEx::GetFont()const->LOGFONTW
 	return lf;
 }
 
-long CListEx::GetFontSize()const
+long CListEx::GetFontSizeInPixels()const
 {
 	assert(IsCreated());
 	if (!IsCreated()) { return { }; }
@@ -2452,30 +2435,18 @@ bool CListEx::EditInPlaceShow(bool fShow)
 	return true;
 }
 
-auto CListEx::FontPointsFromScaledPixels(float flSizePixels)const->float
-{
-	return GDIUT::FontPointsFromPixels(flSizePixels) / GetDPIScale();
+auto CListEx::FontPointsFromScaledPixels(long iSizePixels)const->float {
+	return GDIUT::FontPointsFromPixels(iSizePixels) / GetDPIScale();
 }
 
-auto CListEx::FontPointsFromScaledPixels(long iSizePixels)const->long
-{
-	return std::lround(FontPointsFromScaledPixels(static_cast<float>(iSizePixels)));
-}
-
-auto CListEx::FontScaledPixelsFromPoints(float flSizePoints)const->float
-{
-	return GDIUT::FontPixelsFromPoints(flSizePoints) * GetDPIScale();
-}
-
-auto CListEx::FontScaledPixelsFromPoints(long iSizePoints)const->long
-{
-	return std::lround(FontScaledPixelsFromPoints(static_cast<float>(iSizePoints)));
+auto CListEx::FontScaledPixelsFromPoints(float flSizePoints)const->long {
+	return std::lround(GDIUT::FontPixelsFromPoints(flSizePoints) * GetDPIScale());
 }
 
 void CListEx::FontSizeIncDec(bool fInc)
 {
-	const auto lFontSize = FontPointsFromScaledPixels(-GetFontSize()) + (fInc ? 1 : -1);
-	SetFontSize(lFontSize);
+	const auto flFontSizePoints = FontPointsFromScaledPixels(GetFontSizeInPixels()) + (fInc ? 1 : -1);
+	SetFontSizeInPoints(flFontSizePoints);
 }
 
 auto CListEx::GetCustomColor(int iItem, int iSubItem)const->std::optional<LISTEXCOLOR>
@@ -2569,9 +2540,9 @@ auto CListEx::OnDestroy()->LRESULT
 auto CListEx::OnDPIChangedAfterParent()->LRESULT
 {
 	//Take the current font size, in points, with the old DPI.
-	const auto lFontSizePoints = FontPointsFromScaledPixels(-GetFontSize());
-	SetDPIScale(); //Set new DPI scale.
-	SetFontSize(lFontSizePoints);
+	const auto flFontSizePoints = FontPointsFromScaledPixels(GetFontSizeInPixels());
+	UpdateDPIScale(); //Set new DPI scale.
+	SetFontSizeInPoints(flFontSizePoints);
 
 	return 0;
 }
@@ -3148,12 +3119,7 @@ void CListEx::RecalcMeasure()const
 	::SendMessageW(m_hWnd, WM_WINDOWPOSCHANGED, 0, reinterpret_cast<LPARAM>(&wp));
 }
 
-void CListEx::SetDPIScale()
-{
-	m_flDPIScale = GDIUT::GetDPIScaleForHWND(m_hWnd);
-}
-
-void CListEx::SetFontSize(long iSizePoints)
+void CListEx::SetFontSizeInPoints(float flSizePoints)
 {
 	assert(IsCreated());
 	if (!IsCreated()) {
@@ -3161,13 +3127,13 @@ void CListEx::SetFontSize(long iSizePoints)
 	}
 
 	//Prevent font size from being too small or too big.
-	if (iSizePoints < 4 || iSizePoints > 64) {
+	if (flSizePoints < 4.F || flSizePoints > 64.F) {
 		return;
 	}
 
 	LOGFONTW lf { };
 	::GetObjectW(m_hFntList, sizeof(lf), &lf);
-	lf.lfHeight = -FontScaledPixelsFromPoints(iSizePoints);
+	lf.lfHeight = -FontScaledPixelsFromPoints(flSizePoints);
 	SetFont(lf);
 }
 
@@ -3241,6 +3207,11 @@ void CListEx::TTHLShow(bool fShow, UINT uRow)
 
 	TTTOOLINFOW ttiHL { .cbSize { sizeof(TTTOOLINFOW) }, };
 	::SendMessageW(m_hWndRowTT, TTM_TRACKACTIVATE, fShow, reinterpret_cast<LPARAM>(&ttiHL));
+}
+
+void CListEx::UpdateDPIScale()
+{
+	m_flDPIScale = GDIUT::GetDPIScaleForHWND(m_hWnd);
 }
 
 auto CListEx::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,

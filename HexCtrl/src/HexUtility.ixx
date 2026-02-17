@@ -531,16 +531,16 @@ namespace HEXCTRL::INTERNAL::GDIUT { //Windows GDI related stuff.
 		return static_cast<float>(GetDPIForHWND(hWnd)) / USER_DEFAULT_SCREEN_DPI; //High-DPI scale factor for window.
 	}
 
-	//Get font points size from the size in pixels.
-	[[nodiscard]] constexpr auto FontPointsFromPixels(float flSizePixels) -> float {
+	//Get GDI font size in points from the size in pixels.
+	[[nodiscard]] auto FontPointsFromPixels(long iSizePixels) -> float {
 		constexpr auto flPointsInPixel = 72.F / USER_DEFAULT_SCREEN_DPI;
-		return flSizePixels * flPointsInPixel;
+		return std::abs(iSizePixels) * flPointsInPixel;
 	}
 
-	//Get font pixels size from the size in points.
-	[[nodiscard]] constexpr auto FontPixelsFromPoints(float flSizePoints) -> float {
+	//Get GDI font size in pixels from the size in points.
+	[[nodiscard]] auto FontPixelsFromPoints(float flSizePoints) -> long {
 		constexpr auto flPixelsInPoint = USER_DEFAULT_SCREEN_DPI / 72.F;
-		return flSizePoints * flPixelsInPoint;
+		return std::lround(flSizePoints * flPixelsInPoint);
 	}
 
 	//iDirection: -2:LEFT, 1:UP, 2:RIGHT, -1:DOWN.

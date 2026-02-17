@@ -332,10 +332,8 @@ namespace HEXCTRL::INTERNAL {
 		void DrawPageLines(HDC hDC, ULONGLONG ullStartLine, int iLines)const;
 		void FillCapacityString(); //Fill m_wstrCapacity according to current m_dwCapacity.
 		void FillWithZeros();      //Fill selection with zeros.
-		[[nodiscard]] auto FontPointsFromScaledPixels(float flSizePixels)const -> float; //Get font size in points from size in scaled pixels.
-		[[nodiscard]] auto FontPointsFromScaledPixels(long iSizePixels)const -> long;
-		[[nodiscard]] auto FontScaledPixelsFromPoints(float flSizePoints)const -> float; //Get font size in scaled pixels from size in points.
-		[[nodiscard]] auto FontScaledPixelsFromPoints(long iSizePoints)const -> long;
+		[[nodiscard]] auto FontPointsFromScaledPixels(long iSizePixels)const -> float;  //Get font size in points from size in scaled pixels.
+		[[nodiscard]] auto FontScaledPixelsFromPoints(float flSizePoints)const -> long; //Get font size in scaled pixels from size in points.
 		void FontSizeIncDec(bool fInc = true); //Increase os decrease font size by minimum amount.
 		[[nodiscard]] auto GetBottomLine()const -> ULONGLONG; //Returns current bottom line number in view.
 		[[nodiscard]] auto GetCaretPosImpl()const -> std::uint64_t;
@@ -347,7 +345,7 @@ namespace HEXCTRL::INTERNAL {
 		[[nodiscard]] auto GetDataSizeImpl()const -> std::uint64_t;
 		[[nodiscard]] auto GetDigitsOffset()const -> DWORD;
 		[[nodiscard]] auto GetDPIScale()const -> float;
-		[[nodiscard]] long GetFontSize(bool fMain)const;
+		[[nodiscard]] long GetFontSizeInPixels(bool fMain)const;
 		[[nodiscard]] auto GetHexChars()const -> const wchar_t*;
 		[[nodiscard]] auto GetOffsetImpl(std::uint64_t u64Offset, bool fGetVirt)const -> std::uint64_t;
 		[[nodiscard]] auto GetPagePosImpl()const -> std::uint64_t;
@@ -418,9 +416,8 @@ namespace HEXCTRL::INTERNAL {
 		bool SetConfigImpl(std::wstring_view wsvPath);
 		void SetDateInfoImpl(std::uint32_t dwFormat, wchar_t wchSepar);
 		void SetDataVirtual(SpanByte spnData, const HEXSPAN& hss)const; //Sets data (notifies back) in VirtualData mode.
-		void SetDPIScale(); //Set new DPI scale factor according to current DPI.
 		void SetFontImpl(const LOGFONTW& lf, bool fMain, bool fRedraw = true, bool fNotify = true);
-		void SetFontSizeInPoints(long iSizePoints, bool fMain); //Set font size in points.
+		void SetFontSizeInPoints(float flSizePoints, bool fMain); //Set font size in points.
 		void SetGroupSizeImpl(DWORD dwSize, bool fRedraw = true, bool fNotify = true);
 		void SetScrollCursor();
 		void SetUnprintableCharImpl(wchar_t wch, bool fRedraw = true);
@@ -429,6 +426,7 @@ namespace HEXCTRL::INTERNAL {
 		void TTMainShow(bool fShow, bool fTimer = false); //Main tooltip show/hide.
 		void TTOffsetShow(bool fShow); //Tooltip Offset show/hide.
 		void Undo();
+		void UpdateDPIScale(); //Set new DPI scale factor according to current DPI.
 		static void ModifyOper(std::byte* pData, const HEXMODIFY& hms, SpanCByte); //Modify operation classical.
 		static void ModifyOperVec128(std::byte* pData, const HEXMODIFY& hms, SpanCByte); //Modify operation x86/x64 vector 128.
 		static void ModifyOperVec256(std::byte* pData, const HEXMODIFY& hms, SpanCByte); //Modify operation x86/x64 vector 256.
@@ -673,17 +671,17 @@ bool CHexCtrl::Create(const HEXCREATE& hcs)
 	m_fInfoBar = hcs.fInfoBar;
 	m_fOffsetHex = hcs.fOffsetHex;
 
-	SetDPIScale();
+	UpdateDPIScale();
 	CreateMenu();
 	CreatePens();
 
 	//Default main font.
-	const LOGFONTW lfMain { .lfHeight { -FontScaledPixelsFromPoints(11L) }, .lfWeight { FW_NORMAL },
+	const LOGFONTW lfMain { .lfHeight { -FontScaledPixelsFromPoints(11.F) }, .lfWeight { FW_NORMAL },
 		.lfQuality { CLEARTYPE_QUALITY }, .lfPitchAndFamily { FIXED_PITCH }, .lfFaceName { L"Consolas" } };
 	SetFontImpl(hcs.pLogFont != nullptr ? *hcs.pLogFont : lfMain, true, false, false);
 
 	//Info area font, independent from the main font, its size is a bit smaller than the default main font.
-	const LOGFONTW lfInfo { .lfHeight { -FontScaledPixelsFromPoints(11L) + 1 }, .lfWeight { FW_NORMAL },
+	const LOGFONTW lfInfo { .lfHeight { -FontScaledPixelsFromPoints(11.F) + 1 }, .lfWeight { FW_NORMAL },
 		.lfQuality { CLEARTYPE_QUALITY }, .lfPitchAndFamily { FIXED_PITCH }, .lfFaceName { L"Consolas" } };
 	SetFontImpl(lfInfo, false, false, false);
 
@@ -3620,26 +3618,18 @@ void CHexCtrl::FillWithZeros()
 	RedrawImpl();
 }
 
-auto CHexCtrl::FontPointsFromScaledPixels(float flSizePixels)const->float {
-	return GDIUT::FontPointsFromPixels(flSizePixels) / GetDPIScale();
+auto CHexCtrl::FontPointsFromScaledPixels(long iSizePixels)const->float {
+	return GDIUT::FontPointsFromPixels(iSizePixels) / GetDPIScale();
 }
 
-auto CHexCtrl::FontPointsFromScaledPixels(long lSizePixels)const->long {
-	return std::lround(FontPointsFromScaledPixels(static_cast<float>(lSizePixels)));
-}
-
-auto CHexCtrl::FontScaledPixelsFromPoints(float flSizePoints)const->float {
-	return GDIUT::FontPixelsFromPoints(flSizePoints) * GetDPIScale();
-}
-
-auto CHexCtrl::FontScaledPixelsFromPoints(long iSizePoints)const->long {
-	return std::lround(FontScaledPixelsFromPoints(static_cast<float>(iSizePoints)));
+auto CHexCtrl::FontScaledPixelsFromPoints(float flSizePoints)const->long {
+	return std::lround(GDIUT::FontPixelsFromPoints(flSizePoints) * GetDPIScale());
 }
 
 void CHexCtrl::FontSizeIncDec(bool fInc)
 {
-	const auto lFontSizePoints = FontPointsFromScaledPixels(-GetFontSize(true)) + (fInc ? 1 : -1);
-	SetFontSizeInPoints(lFontSizePoints, true);
+	const auto flFontSizePoints = FontPointsFromScaledPixels(GetFontSizeInPixels(true)) + (fInc ? 1 : -1);
+	SetFontSizeInPoints(flFontSizePoints, true);
 }
 
 auto CHexCtrl::GetBottomLine()const->ULONGLONG
@@ -3719,7 +3709,7 @@ auto CHexCtrl::GetDPIScale()const->float
 	return m_flDPIScale;
 }
 
-long CHexCtrl::GetFontSize(bool fMain)const
+long CHexCtrl::GetFontSizeInPixels(bool fMain)const
 {
 	return GetFont(fMain).lfHeight;
 }
@@ -4158,14 +4148,14 @@ auto CHexCtrl::OnDestroy()->LRESULT
 auto CHexCtrl::OnDPIChangedAfterParent()->LRESULT
 {
 	//Take the current font size, in points, with the old DPI.
-	const auto lFontPointsMain = FontPointsFromScaledPixels(-GetFontSize(true));
-	const auto lFontPointsInfo = FontPointsFromScaledPixels(-GetFontSize(false));
+	const auto flFontPointsMain = FontPointsFromScaledPixels(GetFontSizeInPixels(true));
+	const auto flFontPointsInfo = FontPointsFromScaledPixels(GetFontSizeInPixels(false));
 
-	SetDPIScale(); //Set new DPI scale.
+	UpdateDPIScale(); //Set new DPI scale.
 
 	//Invoke all DPI dependent routines, with the new DPI.
-	SetFontSizeInPoints(lFontPointsMain, true);
-	SetFontSizeInPoints(lFontPointsInfo, false);
+	SetFontSizeInPoints(flFontPointsMain, true);
+	SetFontSizeInPoints(flFontPointsInfo, false);
 	CreateMenu();
 	m_ScrollV.OnDPIChangedAfterParent();
 	m_ScrollH.OnDPIChangedAfterParent();
@@ -5725,11 +5715,6 @@ void CHexCtrl::SetDataVirtual(SpanByte spnData, const HEXSPAN& hss)const
 		.stHexSpan { hss }, .spnData { spnData } });
 }
 
-void CHexCtrl::SetDPIScale()
-{
-	m_flDPIScale = GDIUT::GetDPIScaleForHWND(m_Wnd);
-}
-
 void CHexCtrl::SetFontImpl(const LOGFONTW& lf, bool fMain, bool fRedraw, bool fNotify)
 {
 	if (fMain) {
@@ -5749,13 +5734,13 @@ void CHexCtrl::SetFontImpl(const LOGFONTW& lf, bool fMain, bool fRedraw, bool fN
 	if (fNotify) { ParentNotify(HEXCTRL_MSG_SETFONT); }
 }
 
-void CHexCtrl::SetFontSizeInPoints(long iSizePoints, bool fMain)
+void CHexCtrl::SetFontSizeInPoints(float flSizePoints, bool fMain)
 {
-	if (iSizePoints < 4 || iSizePoints > 64) //Prevent font size from being too small or too big.
+	if (flSizePoints < 4.F || flSizePoints > 64.F) //Prevent font size from being too small or too big.
 		return;
 
 	auto lf = GetFont(fMain);
-	lf.lfHeight = -FontScaledPixelsFromPoints(iSizePoints);
+	lf.lfHeight = -FontScaledPixelsFromPoints(flSizePoints);
 	SetFont(lf, fMain);
 }
 
@@ -5987,6 +5972,11 @@ void CHexCtrl::Undo()
 	m_vecUndo.pop_back();
 	OnModifyData();
 	m_Wnd.RedrawWindow();
+}
+
+void CHexCtrl::UpdateDPIScale()
+{
+	m_flDPIScale = GDIUT::GetDPIScaleForHWND(m_Wnd);
 }
 
 void CHexCtrl::ModifyOper(std::byte* pData, const HEXMODIFY& hms, [[maybe_unused]] SpanCByte)
