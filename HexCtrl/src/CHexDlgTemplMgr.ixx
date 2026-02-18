@@ -68,6 +68,7 @@ namespace HEXCTRL::INTERNAL {
 		static auto CALLBACK TreeSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
 			UINT_PTR uIdSubclass, DWORD_PTR dwRefData)->LRESULT;
 	private:
+		void CreateArrows();
 		[[nodiscard]] auto GetAppliedFromItem(HTREEITEM hTreeItem) -> PCTEMPLAPPLIED;
 		[[nodiscard]] auto GetHexCtrl()const -> IHexCtrl*;
 		[[nodiscard]] auto GetIDForNewTemplate()const -> int;
@@ -501,6 +502,19 @@ void CHexDlgTemplMgr::UpdateData()
 
 //Private methods.
 
+void CHexDlgTemplMgr::CreateArrows()
+{
+	const auto hDC = m_WndBtnMin.GetDC();
+	const auto iWidth = m_WndBtnMin.GetWindowRect().Width();
+	const auto iHeight = m_WndBtnMin.GetWindowRect().Height();
+	::DeleteObject(m_hBmpMin);
+	::DeleteObject(m_hBmpMax);
+	m_hBmpMin = GDIUT::CreateArrowBitmap(hDC, iWidth, iHeight, 1, ::GetSysColor(COLOR_3DFACE), ::GetSysColor(COLOR_GRAYTEXT));
+	m_hBmpMax = GDIUT::CreateArrowBitmap(hDC, iWidth, iHeight, -1, ::GetSysColor(COLOR_3DFACE), ::GetSysColor(COLOR_GRAYTEXT));
+	m_WndBtnMin.ReleaseDC(hDC);
+	m_WndBtnMin.SetBitmap(IsMinimized() ? m_hBmpMax : m_hBmpMin);
+}
+
 auto CHexDlgTemplMgr::GetAppliedFromItem(HTREEITEM hTreeItem)->PCTEMPLAPPLIED
 {
 	auto hRoot = hTreeItem;
@@ -710,8 +724,7 @@ void CHexDlgTemplMgr::OnCheckMin()
 
 	//Top Group Box rect.
 	const auto iHeightGRB = m_Wnd.GetDlgItem(IDC_HEXCTRL_TEMPLMGR_GRB_TOP).GetClientRect().Height();
-	auto hdwp = ::BeginDeferWindowPos(static_cast<int>(std::size(arrIDsToMove) + std::size(arrIDsToResize),
-		+std::size(arrIDsToHide)));
+	auto hdwp = ::BeginDeferWindowPos(static_cast<int>(std::size(arrIDsToMove) + std::size(arrIDsToResize) + std::size(arrIDsToHide)));
 	for (const auto id : arrIDsToHide) { //Hiding.
 		hdwp = ::DeferWindowPos(hdwp, m_Wnd.GetDlgItem(id), nullptr, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
 			| (fMinimize ? SWP_HIDEWINDOW : SWP_SHOWWINDOW));
@@ -733,6 +746,7 @@ void CHexDlgTemplMgr::OnCheckMin()
 		hdwp = ::DeferWindowPos(hdwp, hWnd, nullptr, rcWnd.left, rcWnd.top, rcWnd.Width(),
 			rcWnd.Height(), SWP_NOZORDER | SWP_NOACTIVATE);
 	}
+
 	m_DynLayout.Enable(false); //Otherwise DynamicLayout won't know that all dynamic windows have changed.
 	::EndDeferWindowPos(hdwp);
 	m_DynLayout.Enable(true);
@@ -831,7 +845,9 @@ auto CHexDlgTemplMgr::OnDestroy()->INT_PTR
 
 auto CHexDlgTemplMgr::OnDPIChanged([[maybe_unused]] const MSG& msg)->INT_PTR
 {
+	CreateArrows();
 	m_DynLayout.Enable(true);
+
 	return 0;
 }
 
@@ -924,13 +940,7 @@ auto CHexDlgTemplMgr::OnInitDialog(const MSG& msg)->INT_PTR
 		OnTemplateLoadUnload(pTemplate->iTemplateID, true);
 	}
 
-	const auto hDC = m_WndBtnMin.GetDC();
-	const auto iWidth = m_WndBtnMin.GetWindowRect().Width();
-	const auto iHeight = m_WndBtnMin.GetWindowRect().Height();
-	m_hBmpMin = GDIUT::CreateArrowBitmap(hDC, iWidth, iHeight, 1, ::GetSysColor(COLOR_3DFACE), ::GetSysColor(COLOR_GRAYTEXT));
-	m_hBmpMax = GDIUT::CreateArrowBitmap(hDC, iWidth, iHeight, -1, ::GetSysColor(COLOR_3DFACE), ::GetSysColor(COLOR_GRAYTEXT));
-	m_WndBtnMin.ReleaseDC(hDC);
-	m_WndBtnMin.SetBitmap(m_hBmpMin); //Set the min arrow bitmap to the min-max checkbox.
+	CreateArrows();
 
 	return TRUE;
 }
