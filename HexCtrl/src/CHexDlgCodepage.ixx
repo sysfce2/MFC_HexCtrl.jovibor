@@ -243,9 +243,10 @@ auto CHexDlgCodepage::OnInitDialog(const MSG& msg)->INT_PTR
 	m_ListEx.Create({ .hWndParent { m_Wnd }, .uID { IDC_HEXCTRL_CODEPAGE_LIST }, .flSizeFontList { 10.F },
 		.flSizeFontHdr { 9.F }, .fDialogCtrl { true }, .fSortable { true }, .fLinks { true } });
 	m_ListEx.SetExtendedStyle(LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT);
-	m_ListEx.InsertColumn(0, L"Code page", LVCFMT_LEFT, 80);
-	m_ListEx.InsertColumn(1, L"Name", LVCFMT_LEFT, 280);
-	m_ListEx.InsertColumn(2, L"Max chars", LVCFMT_LEFT, 80);
+	const auto flDPIScale = GDIUT::GetDPIScaleForHWND(m_ListEx);
+	m_ListEx.InsertColumn(0, L"Code page", LVCFMT_LEFT, std::lround(80 * flDPIScale));
+	m_ListEx.InsertColumn(1, L"Name", LVCFMT_LEFT, std::lround(280 * flDPIScale));
+	m_ListEx.InsertColumn(2, L"Max chars", LVCFMT_LEFT, std::lround(80 * flDPIScale));
 
 	m_vecCodePage.emplace_back(-1, L"<link=\"https://en.wikipedia.org/wiki/ASCII\">ASCII 7-bit</link> (default)", 1);
 	m_vecCodePage.emplace_back(0, L"Windows Internal UTF-16 (wchar_t)", 4);

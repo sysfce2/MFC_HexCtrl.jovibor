@@ -559,12 +559,13 @@ auto CHexDlgBkmMgr::OnInitDialog(const MSG& msg)->INT_PTR
 	m_ListEx.Create({ .hWndParent { m_Wnd }, .uID { IDC_HEXCTRL_BKMMGR_LIST }, .flSizeFontList { 10.F },
 		.flSizeFontHdr { 10.F }, .fDialogCtrl { true }, .fSortable { true } });
 	m_ListEx.SetExtendedStyle(LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT);
-	m_ListEx.InsertColumn(0, L"№", LVCFMT_LEFT, 40);
-	m_ListEx.InsertColumn(1, L"Offset", LVCFMT_LEFT, 80, -1, 0, true);
-	m_ListEx.InsertColumn(2, L"Size", LVCFMT_LEFT, 50, -1, 0, true);
-	m_ListEx.InsertColumn(3, L"Description", LVCFMT_LEFT, 250, -1, 0, true);
-	m_ListEx.InsertColumn(4, L"Bk", LVCFMT_LEFT, 40);
-	m_ListEx.InsertColumn(5, L"Text", LVCFMT_LEFT, 40);
+	const auto flDPIScale = GDIUT::GetDPIScaleForHWND(m_ListEx);
+	m_ListEx.InsertColumn(0, L"№", LVCFMT_LEFT, std::lround(40 * flDPIScale));
+	m_ListEx.InsertColumn(1, L"Offset", LVCFMT_LEFT, std::lround(80 * flDPIScale), -1, 0, true);
+	m_ListEx.InsertColumn(2, L"Size", LVCFMT_LEFT, std::lround(50 * flDPIScale), -1, 0, true);
+	m_ListEx.InsertColumn(3, L"Description", LVCFMT_LEFT, std::lround(250 * flDPIScale), -1, 0, true);
+	m_ListEx.InsertColumn(4, L"Bk", LVCFMT_LEFT, std::lround(40 * flDPIScale));
+	m_ListEx.InsertColumn(5, L"Text", LVCFMT_LEFT, std::lround(40 * flDPIScale));
 
 	m_menuList.CreatePopupMenu();
 	m_menuList.AppendString(static_cast<UINT_PTR>(EMenuID::IDM_BKMMGR_REMOVE), L"Remove");

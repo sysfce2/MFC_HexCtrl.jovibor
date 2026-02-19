@@ -1222,8 +1222,9 @@ auto CHexDlgSearch::OnInitDialog(const MSG& msg)->INT_PTR
 	m_ListEx.Create({ .hWndParent { m_Wnd }, .uID { IDC_HEXCTRL_SEARCH_LIST }, .flSizeFontList { 10.F },
 		.flSizeFontHdr { 10.F }, .fDialogCtrl { true } });
 	m_ListEx.SetExtendedStyle(LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT);
-	m_ListEx.InsertColumn(0, L"№", LVCFMT_LEFT, 50);
-	m_ListEx.InsertColumn(1, L"Offset", LVCFMT_LEFT, 455);
+	const auto flDPIScale = GDIUT::GetDPIScaleForHWND(m_ListEx);
+	m_ListEx.InsertColumn(0, L"№", LVCFMT_LEFT, std::lround(50 * flDPIScale));
+	m_ListEx.InsertColumn(1, L"Offset", LVCFMT_LEFT, std::lround(455 * flDPIScale));
 
 	m_MenuList.CreatePopupMenu();
 	m_MenuList.AppendString(static_cast<UINT_PTR>(EMenuID::IDM_SEARCH_ADDBKM), L"Add bookmark(s)");

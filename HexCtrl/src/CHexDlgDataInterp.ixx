@@ -503,8 +503,9 @@ auto CHexDlgDataInterp::OnInitDialog(const MSG& msg)->INT_PTR
 
 	m_ListEx.Create({ .hWndParent { m_Wnd }, .uID { IDC_HEXCTRL_DATAINTERP_LIST }, .fDialogCtrl { true } });
 	m_ListEx.SetExtendedStyle(LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT);
-	m_ListEx.InsertColumn(0, L"Data type", LVCFMT_LEFT, 143);
-	m_ListEx.InsertColumn(1, L"Value", LVCFMT_LEFT, 240, -1, LVCFMT_LEFT, true);
+	const auto flDPIScale = GDIUT::GetDPIScaleForHWND(m_ListEx);
+	m_ListEx.InsertColumn(0, L"Data type", LVCFMT_LEFT, std::lround(143 * flDPIScale));
+	m_ListEx.InsertColumn(1, L"Value", LVCFMT_LEFT, std::lround(240 * flDPIScale), -1, LVCFMT_LEFT, true);
 	m_ListEx.SetItemCountEx(static_cast<int>(m_vecData.size()), LVSICF_NOSCROLL);
 
 	m_DynLayout.SetHost(m_Wnd);

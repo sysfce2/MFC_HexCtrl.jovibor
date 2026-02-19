@@ -889,14 +889,15 @@ auto CHexDlgTemplMgr::OnInitDialog(const MSG& msg)->INT_PTR
 	m_ListEx.Create({ .hWndParent { m_Wnd }, .uID { IDC_HEXCTRL_TEMPLMGR_LIST }, .flSizeFontList { 10.F },
 		.flSizeFontHdr { 10.F }, .fDialogCtrl { true } });
 	m_ListEx.SetExtendedStyle(LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT);
-	m_ListEx.InsertColumn(COL_TYPE, L"Type", LVCFMT_LEFT, 85);
-	m_ListEx.InsertColumn(COL_NAME, L"Name", LVCFMT_LEFT, 200);
-	m_ListEx.InsertColumn(COL_OFFSET, L"Offset", LVCFMT_LEFT, 50);
-	m_ListEx.InsertColumn(COL_SIZE, L"Size", LVCFMT_LEFT, 50);
-	m_ListEx.InsertColumn(COL_DATA, L"Data", LVCFMT_LEFT, 120, -1, LVCFMT_LEFT, true);
-	m_ListEx.InsertColumn(COL_ENDIAN, L"Endianness", LVCFMT_CENTER, 75, -1, LVCFMT_CENTER);
-	m_ListEx.InsertColumn(COL_DESCR, L"Description", LVCFMT_LEFT, 100, -1, LVCFMT_LEFT, true);
-	m_ListEx.InsertColumn(COL_COLORS, L"Colors", LVCFMT_LEFT, 57);
+	const auto flDPIScale = GDIUT::GetDPIScaleForHWND(m_ListEx);
+	m_ListEx.InsertColumn(COL_TYPE, L"Type", LVCFMT_LEFT, std::lround(85 * flDPIScale));
+	m_ListEx.InsertColumn(COL_NAME, L"Name", LVCFMT_LEFT, std::lround(200 * flDPIScale));
+	m_ListEx.InsertColumn(COL_OFFSET, L"Offset", LVCFMT_LEFT, std::lround(50 * flDPIScale));
+	m_ListEx.InsertColumn(COL_SIZE, L"Size", LVCFMT_LEFT, std::lround(50 * flDPIScale));
+	m_ListEx.InsertColumn(COL_DATA, L"Data", LVCFMT_LEFT, std::lround(120 * flDPIScale), -1, LVCFMT_LEFT, true);
+	m_ListEx.InsertColumn(COL_ENDIAN, L"Endianness", LVCFMT_CENTER, std::lround(75 * flDPIScale), -1, LVCFMT_CENTER);
+	m_ListEx.InsertColumn(COL_DESCR, L"Description", LVCFMT_LEFT, std::lround(100 * flDPIScale), -1, LVCFMT_LEFT, true);
+	m_ListEx.InsertColumn(COL_COLORS, L"Colors", LVCFMT_LEFT, std::lround(57 * flDPIScale));
 
 	using enum EMenuID;
 	m_MenuHdr.CreatePopupMenu();
