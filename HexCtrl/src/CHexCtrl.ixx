@@ -49,9 +49,11 @@ namespace HEXCTRL::INTERNAL {
 		auto DoModal(HWND hWndParent = nullptr) -> INT_PTR;
 		[[nodiscard]] auto ProcessMsg(const MSG& msg) -> INT_PTR;
 	private:
+		void CreateRes();
 		auto OnCommand(const MSG& msg) -> INT_PTR;
 		auto OnCtlClrStatic(const MSG& msg) -> INT_PTR;
 		auto OnDestroy() -> INT_PTR;
+		auto OnDPIChanged(const MSG& msg) -> INT_PTR;
 		auto OnInitDialog(const MSG& msg) -> INT_PTR;
 		auto OnLButtonDown(const MSG& msg) -> INT_PTR;
 		auto OnLButtonUp(const MSG& msg) -> INT_PTR;
@@ -79,6 +81,7 @@ auto CHexDlgAbout::ProcessMsg(const MSG& msg)->INT_PTR {
 	case WM_COMMAND: return OnCommand(msg);
 	case WM_CTLCOLORSTATIC: return OnCtlClrStatic(msg);
 	case WM_DESTROY: return OnDestroy();
+	case WM_DPICHANGED: return OnDPIChanged(msg);
 	case WM_INITDIALOG: return OnInitDialog(msg);
 	case WM_LBUTTONDOWN: return OnLButtonDown(msg);
 	case WM_LBUTTONUP: return OnLButtonUp(msg);
@@ -87,6 +90,33 @@ auto CHexDlgAbout::ProcessMsg(const MSG& msg)->INT_PTR {
 	default:
 		return 0;
 	}
+}
+
+void CHexDlgAbout::CreateRes()
+{
+	::DeleteObject(m_hFontDef);
+	::DeleteObject(m_hFontUnderline);
+
+	if (const auto hFont = m_WndLink.GetHFont(); hFont != nullptr) {
+		m_hFontDef = hFont;
+		auto lf = m_WndLink.GetLogFont().value();
+		lf.lfUnderline = TRUE;
+		m_hFontUnderline = ::CreateFontIndirectW(&lf);
+	}
+	else {
+		LOGFONTW lf { };
+		::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(lf), &lf);
+		m_hFontDef = ::CreateFontIndirectW(&lf);
+		lf.lfUnderline = TRUE;
+		m_hFontUnderline = ::CreateFontIndirectW(&lf);
+	}
+
+	::DeleteObject(m_hBmpLogo);
+	const auto iSizeIcon = static_cast<int>(32 * GDIUT::GetDPIScaleForHWND(m_Wnd));
+	m_hBmpLogo = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_LOGO),
+		IMAGE_BITMAP, iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
+	const auto hWndLogo = m_Wnd.GetDlgItem(IDC_HEXCTRL_ABOUT_LOGO);
+	::SendMessageW(hWndLogo, STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(m_hBmpLogo));
 }
 
 auto CHexDlgAbout::OnCommand(const MSG& msg)->INT_PTR {
@@ -121,36 +151,23 @@ auto CHexDlgAbout::OnDestroy()->INT_PTR {
 	::DeleteObject(m_hFontUnderline);
 
 	return TRUE;
-};
+}
+
+auto CHexDlgAbout::OnDPIChanged([[maybe_unused]] const MSG& msg)->INT_PTR
+{
+	CreateRes();
+	return 0;
+}
 
 auto CHexDlgAbout::OnInitDialog(const MSG& msg)->INT_PTR
 {
 	m_Wnd.Attach(msg.hwnd);
 	m_WndLink.Attach(m_Wnd.GetDlgItem(IDC_HEXCTRL_ABOUT_STAT_LINKGH));
-
-	if (const auto hFont = m_WndLink.GetHFont(); hFont != nullptr) {
-		m_hFontDef = hFont;
-		auto lf = m_WndLink.GetLogFont().value();
-		lf.lfUnderline = TRUE;
-		m_hFontUnderline = ::CreateFontIndirectW(&lf);
-	}
-	else {
-		LOGFONTW lf { };
-		::GetObjectW(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)), sizeof(lf), &lf);
-		m_hFontDef = ::CreateFontIndirectW(&lf);
-		lf.lfUnderline = TRUE;
-		m_hFontUnderline = ::CreateFontIndirectW(&lf);
-	}
+	CreateRes();
 
 	const auto wstrVersion = std::format(L"Hex Control for Windows apps, v{}.{}.{}\r\nCopyright © 2018-present Jovibor",
 		HEXCTRL_VERSION_MAJOR, HEXCTRL_VERSION_MINOR, HEXCTRL_VERSION_PATCH);
 	::SetWindowTextW(m_Wnd.GetDlgItem(IDC_HEXCTRL_ABOUT_STAT_VERSION), wstrVersion.data());
-
-	const auto iSizeIcon = static_cast<int>(32 * GDIUT::GetDPIScaleForHWND(m_Wnd));
-	m_hBmpLogo = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_LOGO),
-		IMAGE_BITMAP, iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
-	const auto hWndLogo = m_Wnd.GetDlgItem(IDC_HEXCTRL_ABOUT_LOGO);
-	::SendMessageW(hWndLogo, STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(m_hBmpLogo));
 
 	return TRUE;
 }
