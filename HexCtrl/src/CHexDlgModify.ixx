@@ -192,7 +192,7 @@ void CHexDlgOpers::OnCancel()
 	if (m_u64Flags & HEXCTRL_FLAG_DLG_NOESC)
 		return;
 
-	::ShowWindow(m_Wnd.GetParent(), SW_HIDE);
+	m_Wnd.GetParent().ShowWindow(SW_HIDE);
 }
 
 auto CHexDlgOpers::OnCommand(const MSG& msg)->INT_PTR
@@ -684,7 +684,7 @@ void CHexDlgFillData::OnCancel()
 	if (IsNoEsc())
 		return;
 
-	::ShowWindow(m_Wnd.GetParent(), SW_HIDE);
+	m_Wnd.GetParent().ShowWindow(SW_HIDE);
 }
 
 void CHexDlgFillData::OnComboDataEditChange()
@@ -1019,7 +1019,7 @@ auto CHexDlgModify::OnNotify(const MSG& msg)->INT_PTR
 	return TRUE;
 }
 
-void CHexDlgModify::OnNotifyTabSelChanged(NMHDR* /*pNMHDR*/)
+void CHexDlgModify::OnNotifyTabSelChanged([[maybe_unused]] NMHDR* pNMHDR)
 {
 	SetCurrentTab(m_WndTab.GetCurSel());
 }

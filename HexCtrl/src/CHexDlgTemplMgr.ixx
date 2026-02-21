@@ -1083,7 +1083,7 @@ void CHexDlgTemplMgr::OnNotifyListEditBegin(NMHDR* pNMHDR)
 	}
 }
 
-void CHexDlgTemplMgr::OnNotifyListEnterPressed(NMHDR* /*pNMHDR*/)
+void CHexDlgTemplMgr::OnNotifyListEnterPressed([[maybe_unused]] NMHDR* pNMHDR)
 {
 	const auto uSelected = m_ListEx.GetSelectedCount();
 	if (uSelected != 1)
@@ -1310,7 +1310,7 @@ void CHexDlgTemplMgr::OnNotifyListGetDispInfo(NMHDR* pNMHDR)
 	}
 }
 
-void CHexDlgTemplMgr::OnNotifyListHdrRClick(NMHDR* /*pNMHDR*/)
+void CHexDlgTemplMgr::OnNotifyListHdrRClick([[maybe_unused]] NMHDR* pNMHDR)
 {
 	POINT ptCur;
 	::GetCursorPos(&ptCur);
@@ -1327,7 +1327,7 @@ void CHexDlgTemplMgr::OnNotifyListItemChanged(NMHDR* pNMHDR)
 	m_WndTree.SelectItem(TreeItemFromListItem(iItem));
 }
 
-void CHexDlgTemplMgr::OnNotifyListRClick(NMHDR* /*pNMHDR*/)
+void CHexDlgTemplMgr::OnNotifyListRClick([[maybe_unused]] NMHDR* pNMHDR)
 {
 }
 
@@ -1535,7 +1535,7 @@ void CHexDlgTemplMgr::OnNotifyTreeItemChanged(NMHDR* pNMHDR)
 	m_fListGuardEvent = false;
 }
 
-void CHexDlgTemplMgr::OnNotifyTreeRClick(NMHDR* /*pNMHDR*/)
+void CHexDlgTemplMgr::OnNotifyTreeRClick([[maybe_unused]] NMHDR* pNMHDR)
 {
 	POINT pt;
 	::GetCursorPos(&pt);
@@ -2411,7 +2411,7 @@ auto CHexDlgTemplMgr::JSONColors(const rapidjson::Value& value, const char* pszC
 }
 
 auto CHexDlgTemplMgr::TreeSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass,
-	DWORD_PTR /*dwRefData*/)->LRESULT
+	 [[maybe_unused]] DWORD_PTR dwRefData)->LRESULT
 {
 	switch (uMsg) {
 	case WM_KILLFOCUS:

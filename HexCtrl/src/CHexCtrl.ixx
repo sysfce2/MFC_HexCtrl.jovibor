@@ -115,8 +115,7 @@ void CHexDlgAbout::CreateRes()
 	const auto iSizeIcon = static_cast<int>(32 * GDIUT::GetDPIScaleForHWND(m_Wnd));
 	m_hBmpLogo = static_cast<HBITMAP>(::LoadImageW(m_hInstRes, MAKEINTRESOURCEW(IDB_HEXCTRL_LOGO),
 		IMAGE_BITMAP, iSizeIcon, iSizeIcon, LR_CREATEDIBSECTION));
-	const auto hWndLogo = m_Wnd.GetDlgItem(IDC_HEXCTRL_ABOUT_LOGO);
-	::SendMessageW(hWndLogo, STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(m_hBmpLogo));
+	m_Wnd.GetDlgItem(IDC_HEXCTRL_ABOUT_LOGO).SendMsg(STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(m_hBmpLogo));
 }
 
 auto CHexDlgAbout::OnCommand(const MSG& msg)->INT_PTR {
@@ -1489,15 +1488,15 @@ void CHexCtrl::ModifyData(const HEXMODIFY& hms)
 	{
 		std::mt19937 gen(std::random_device { }());
 		std::uniform_int_distribution<std::uint64_t> distUInt64(0, (std::numeric_limits<std::uint64_t>::max)());
-		const auto lmbRandUInt64 = [&](std::byte* pData, const HEXMODIFY& /**/, SpanCByte /**/) {
+		const auto lmbRandUInt64 = [&](std::byte* pData, const HEXMODIFY&, SpanCByte) {
 			assert(pData != nullptr);
 			*reinterpret_cast<std::uint64_t*>(pData) = distUInt64(gen);
 			};
-		const auto lmbRandByte = [&](std::byte* pData, const HEXMODIFY& /**/, SpanCByte /**/) {
+		const auto lmbRandByte = [&](std::byte* pData, const HEXMODIFY&, SpanCByte) {
 			assert(pData != nullptr);
 			*pData = static_cast<std::byte>(distUInt64(gen));
 			};
-		const auto lmbRandFast = [](std::byte* pData, const HEXMODIFY& /**/, SpanCByte spnDataFrom) {
+		const auto lmbRandFast = [](std::byte* pData, const HEXMODIFY&, SpanCByte spnDataFrom) {
 			assert(pData != nullptr);
 			std::copy_n(spnDataFrom.data(), spnDataFrom.size(), pData);
 			};
@@ -4773,8 +4772,8 @@ auto CHexCtrl::OnVScroll([[maybe_unused]] const MSG& msg)->LRESULT
 template<typename T> requires std::is_class_v<T>
 void CHexCtrl::ParentNotify(const T& t)const
 {
-	if (const auto hWndParent = m_Wnd.GetParent(); hWndParent != nullptr) {
-		::SendMessageW(hWndParent, WM_NOTIFY, m_Wnd.GetDlgCtrlID(), reinterpret_cast<LPARAM>(&t));
+	if (const auto wndParent = m_Wnd.GetParent(); !wndParent.IsNull()) {
+		wndParent.SendMsg(WM_NOTIFY, m_Wnd.GetDlgCtrlID(), reinterpret_cast<LPARAM>(&t));
 	}
 }
 
@@ -5585,7 +5584,7 @@ bool CHexCtrl::SetConfigImpl(std::wstring_view wsvPath)
 		}
 
 		const auto nSize = static_cast<std::size_t>(::SizeofResource(m_hInstRes, hRes));
-		const auto pData = static_cast<char*>(::LockResource(hResData));
+		const auto pData = static_cast<const char*>(::LockResource(hResData));
 		docJSON.Parse(pData, nSize);
 		if (docJSON.IsNull()) { //Parse all default keybindings.
 			ut::DBG_REPORT(L"docJSON.IsNull().");
@@ -7940,7 +7939,7 @@ void CHexCtrl::ModifyOperVec256(std::byte* pData, const HEXMODIFY& hms, [[maybe_
 #endif //^^^ _M_IX86 || _M_X64
 
 auto CHexCtrl::SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
-	UINT_PTR uIDSubclass, DWORD_PTR /*dwRefData*/) -> LRESULT {
+	UINT_PTR uIDSubclass, [[maybe_unused]] DWORD_PTR dwRefData) -> LRESULT {
 	if (uMsg == WM_NCDESTROY) {
 		::RemoveWindowSubclass(hWnd, SubclassProc, uIDSubclass);
 	}
