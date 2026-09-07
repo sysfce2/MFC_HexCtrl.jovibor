@@ -232,6 +232,7 @@ namespace HEXCTRL {
 		virtual void DisapplyByID(int iTemplateID) = 0; //iTemplateID is returned by the ApplyTemplate.
 		virtual void DisapplyByOffset(std::uint64_t u64Offset) = 0;
 		[[nodiscard]] virtual auto GetAllApplied() -> VecHexTemplatesApplied = 0; //All currently applied templates.
+		[[nodiscard]] virtual auto GetTemplateFilesList() -> std::vector<std::wstring> = 0; //Returns list of template files paths.
 		virtual void RemoveAllTemplates() = 0; //Removes all templates from applied and from the internal list.
 		virtual void RemoveTemplateFile(const wchar_t* pwszFilePath) = 0; //Removes template file from internal list.
 		virtual void ShowTooltips(bool fShow) = 0;

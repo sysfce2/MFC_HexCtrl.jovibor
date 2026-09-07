@@ -381,7 +381,7 @@ The **Fields**'s properties include:
 - **name** - [mandatory, string] - name of the field
 - **description** - [optional, string] - field description
 - **type** - [optional, string] - field type, such as:  
-`bool`, `char`, `unsigned char`, `byte`, `short`, `unsigned short`, `WORD`, `long`, `unsigned long`, `int`, `unsigned int`, `DWORD`, `long long`, `unsigned long long`, `QWORD`, `float`, `double`, `time32_t`, `time64_t`, `FILETIME`, `SYSTEMTIME`, `GUID`, or any custom type defined in the **CustomTypes** section
+`bool`, `char`, `unsigned char`, `byte`, `short`, `unsigned short`, `WORD`, `long`, `unsigned long`, `int`, `unsigned int`, `dword`, `long long`, `unsigned long long`, `qword`, `float`, `double`, `time32_t`, `time64_t`, `FILETIME`, `SYSTEMTIME`, `GUID`, or any custom type defined in the **CustomTypes** section
 - **size** - [optional, int] - size of the field in bytes, if the **type** field is not provided
 - **array** - [optional, int or object] - It can be an **int**, meaning it's a size of the array, or it can be an object:
   ```json

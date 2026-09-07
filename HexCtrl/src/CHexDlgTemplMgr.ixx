@@ -113,6 +113,7 @@ namespace HEXCTRL::INTERNAL {
 		void DisapplyByOffset(std::uint64_t u64Offset)override;
 		[[nodiscard]] auto GetAllApplied() -> VecHexTemplatesApplied override;
 		[[nodiscard]] auto GetDlgItemHandle(EHexDlgItem eItem)const -> HWND;
+		[[nodiscard]] auto GetTemplateFilesList() -> std::vector<std::wstring> override;
 		[[nodiscard]] auto GetHWND()const -> HWND;
 		[[nodiscard]] bool HasCurrent()const;
 		[[nodiscard]] bool HasApplied()const;
@@ -479,6 +480,15 @@ auto CHexDlgTemplMgr::GetDlgItemHandle(EHexDlgItem eItem)const->HWND
 	case TEMPLMGR_CHK_SWAP: return m_WndBtnEndian;
 	default: return { };
 	}
+}
+
+auto CHexDlgTemplMgr::GetTemplateFilesList()->std::vector<std::wstring> {
+	std::vector<std::wstring> vec;
+	vec.reserve(m_vecTemplateFiles.size());
+	std::ranges::transform(m_vecTemplateFiles, std::back_inserter(vec), [](const std::unique_ptr<std::wstring>& uptr) {
+		return *uptr; });
+
+	return vec;
 }
 
 auto CHexDlgTemplMgr::GetHWND()const->HWND {
@@ -858,11 +868,13 @@ auto CHexDlgTemplMgr::JSONParseFields(const PARSEFIELDS& pf)->std::optional<VecH
 							iSize = umapTypeToSize.at(itMapType->second);
 						}
 						else { //If it's not any standard type, we try to find custom type with the given name.
+							const auto wstrTypeName = ut::StrToWstr(pszType);
 							const auto& vecCTypes = pf.pTemplate->vecCustomType;
 							const auto itVecCT = std::find_if(vecCTypes.begin(), vecCTypes.end(),
-								[=](const HEXTEMPLCT& ct) { return ct.wstrTypeName == ut::StrToWstr(pszType); });
+								[&wstrTypeName](const HEXTEMPLCT& ct) { return ct.wstrTypeName == wstrTypeName; });
 							if (itVecCT == vecCTypes.end()) {
-								ut::DBG_REPORT(L"Unknown 'type' of the field.");
+								ut::DBG_REPORT(std::format(L"Unknown type '{}' of the field '{}'.",
+									wstrTypeName, wstrNameField).data());
 								return false;
 							}
 
@@ -1917,9 +1929,8 @@ void CHexDlgTemplMgr::ShowListDataGUID(LPWSTR pwsz, GUID stGUID, bool fShouldSwa
 
 auto CHexDlgTemplMgr::TMPLAddTemplateFile(const wchar_t* pwszFilePath)->const wchar_t* {
 	if (const auto it = std::find_if(m_vecTemplateFiles.begin(), m_vecTemplateFiles.end(),
-		[pwszFilePath](const std::unique_ptr<std::wstring>& uptr) {
-			return *uptr == pwszFilePath; });
-			it != m_vecTemplateFiles.end()) { //Already exists.
+		[pwszFilePath](const std::unique_ptr<std::wstring>& uptr) {	return *uptr == pwszFilePath; });
+		it != m_vecTemplateFiles.end()) { //Already exists.
 		return it->get()->data();
 	}
 
