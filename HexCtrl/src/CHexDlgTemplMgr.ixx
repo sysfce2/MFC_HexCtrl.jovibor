@@ -151,13 +151,13 @@ namespace HEXCTRL::INTERNAL {
 	private:
 		void CreateArrows();
 		[[nodiscard]] auto GetHexCtrl()const -> IHexCtrl*;
+		[[nodiscard]] auto GUIGetComboCurrTemplateFilePath()const -> wchar_t*;
 		[[nodiscard]] auto GUIGetTemplateIDFromTree(HTREEITEM hTreeItem) -> int;
+		[[nodiscard]] auto GUIGetTreeSelectedTemplate() -> PCHEXTEMPLATE; //Currently selected Template ptr in the tree.
+		[[nodiscard]] auto GUIGetTreeSelectedTemplateID() -> int;         //Currently selected TemplateID in the tree.
 		void GUIOnTemplateApplyDisapply(int iTemplateID, bool fApply);
 		void GUIOnTemplateAddRemove(const wchar_t* pwszFilePath, bool fAdd);
 		[[nodiscard]] auto GUITreeItemFromListItem(int iListItem)const -> HTREEITEM;
-		[[nodiscard]] auto GUIGetTreeSelectedTemplate() -> PCHEXTEMPLATE; //Currently selected Template ptr in the tree.
-		[[nodiscard]] auto GUIGetTreeSelectedTemplateID() -> int;         //Currently selected TemplateID in the tree.
-		[[nodiscard]] auto GUIGetListCurrTemplateFilePath()const -> wchar_t*;
 		void GUIUpdateDateTimeFormat();
 		void GUIUpdateEditBoxOffsetToCurrHexCaret();
 		void GUIUpdateStaticText();
@@ -174,6 +174,7 @@ namespace HEXCTRL::INTERNAL {
 		void OnCheckSwapEndian();
 		void OnCheckMin();
 		void OnOK();
+		void PreTranslateComboTempl(MSG* pMsg);
 		void RedrawHexCtrl();
 		[[nodiscard]] bool SetDataBool(LPCWSTR pwszText, ULONGLONG ullOffset)const;
 		template<typename T> requires ut::TSize1248<T>
@@ -248,7 +249,7 @@ namespace HEXCTRL::INTERNAL {
 		GDIUT::CWndEdit m_WndEditOffset; //"Offset" edit box.
 		GDIUT::CWndBtn m_WndBtnTT;       //Check-box "Show tooltips".
 		GDIUT::CWndBtn m_WndBtnMin;      //Check-box min-max.
-		GDIUT::CWndBtn m_WndBtnHighlight;   //Check-box "Highlight selected".
+		GDIUT::CWndBtn m_WndBtnHighlight; //Check-box "Highlight selected".
 		GDIUT::CWndBtn m_WndBtnHex;      //Check-box "Hex numbers".
 		GDIUT::CWndBtn m_WndBtnEndian;   //Check-box "Swap endian".
 		GDIUT::CWndCombo m_WndCmbTempl;  //Currently available templates list.
@@ -276,7 +277,8 @@ using namespace HEXCTRL::INTERNAL;
 enum class CHexDlgTemplMgr::EMenuID : std::uint16_t {
 	IDM_TREE_RNDCOLORS = 0x8000, IDM_TREE_DISAPPLY, IDM_TREE_DISAPPLYALL,
 	IDM_LIST_HDR_TYPE, IDM_LIST_HDR_NAME, IDM_LIST_HDR_OFFSET, IDM_LIST_HDR_SIZE,
-	IDM_LIST_HDR_DATA, IDM_LIST_HDR_ENDIANNESS, IDM_LIST_HDR_DESCRIPTION, IDM_LIST_HDR_COLORS
+	IDM_LIST_HDR_DATA, IDM_LIST_HDR_ENDIANNESS, IDM_LIST_HDR_DESCRIPTION, IDM_LIST_HDR_COLORS,
+	IDM_COMBOBOX_OPENFILE
 };
 
 enum CHexDlgTemplMgr::EListColumns : std::int8_t {
@@ -310,7 +312,7 @@ void CHexDlgTemplMgr::ApplyCurr(std::uint64_t u64Offset) {
 	if (!m_Wnd.IsWindow() || !HasCurrent())
 		return;
 
-	ApplyTemplate(GUIGetListCurrTemplateFilePath(), u64Offset);
+	ApplyTemplate(GUIGetComboCurrTemplateFilePath(), u64Offset);
 }
 
 auto CHexDlgTemplMgr::ApplyTemplate(const wchar_t* pwszFilePath, std::uint64_t u64Offset)->int {
@@ -544,6 +546,7 @@ bool CHexDlgTemplMgr::IsShowTooltips()const {
 }
 
 bool CHexDlgTemplMgr::PreTranslateMsg(MSG* pMsg) {
+	PreTranslateComboTempl(pMsg);
 	return m_Wnd.IsDlgMessage(pMsg);
 }
 
@@ -1203,6 +1206,15 @@ auto CHexDlgTemplMgr::GetHexCtrl()const->IHexCtrl* {
 	return m_pHexCtrl;
 }
 
+auto CHexDlgTemplMgr::GUIGetComboCurrTemplateFilePath()const->wchar_t* {
+	const auto iIndex = m_WndCmbTempl.GetCurSel();
+	if (iIndex == CB_ERR) {
+		return { };
+	}
+
+	return reinterpret_cast<wchar_t*>(m_WndCmbTempl.GetItemData(iIndex));
+}
+
 auto CHexDlgTemplMgr::GUIGetTemplateIDFromTree(HTREEITEM hTreeItem)->int {
 	auto hRoot = hTreeItem;
 	while (hRoot != nullptr) { //Root node.
@@ -1219,15 +1231,6 @@ auto CHexDlgTemplMgr::GUIGetTreeSelectedTemplate()->PCHEXTEMPLATE {
 
 auto CHexDlgTemplMgr::GUIGetTreeSelectedTemplateID()->int {
 	return GUIGetTemplateIDFromTree(m_WndTree.GetSelectedItem());
-}
-
-auto CHexDlgTemplMgr::GUIGetListCurrTemplateFilePath()const->wchar_t* {
-	const auto iIndex = m_WndCmbTempl.GetCurSel();
-	if (iIndex == CB_ERR) {
-		return { };
-	}
-
-	return reinterpret_cast<wchar_t*>(m_WndCmbTempl.GetItemData(iIndex));
 }
 
 void CHexDlgTemplMgr::GUIOnTemplateApplyDisapply(int iTemplateID, bool fApply)
@@ -1449,7 +1452,7 @@ void CHexDlgTemplMgr::OnBnAddTemplate()
 }
 
 void CHexDlgTemplMgr::OnBnRemoveTemplate() {
-	RemoveTemplateFile(GUIGetListCurrTemplateFilePath());
+	RemoveTemplateFile(GUIGetComboCurrTemplateFilePath());
 }
 
 void CHexDlgTemplMgr::OnBnApply()
@@ -1469,7 +1472,7 @@ void CHexDlgTemplMgr::OnBnApply()
 		return;
 	}
 
-	ApplyTemplate(GUIGetListCurrTemplateFilePath(), GetHexCtrl()->GetOffset(*optOffset, false));
+	ApplyTemplate(GUIGetComboCurrTemplateFilePath(), GetHexCtrl()->GetOffset(*optOffset, false));
 }
 
 void CHexDlgTemplMgr::OnCancel() {
@@ -1542,6 +1545,25 @@ void CHexDlgTemplMgr::OnOK()
 	}
 	else if (wndFocus == m_WndEditOffset) { //Focus is on the "Offset" edit-box.
 		OnBnApply();
+	}
+}
+
+void CHexDlgTemplMgr::PreTranslateComboTempl(MSG* pMsg) {
+	if (m_WndCmbTempl.IsNull() || pMsg->hwnd != m_WndCmbTempl || pMsg->message != WM_RBUTTONUP)
+		return;
+
+	const auto pwszFilePath = GUIGetComboCurrTemplateFilePath();
+	if (pwszFilePath == nullptr)
+		return;
+
+	POINT ptCur;
+	::GetCursorPos(&ptCur);
+	GDIUT::CMenu menu;
+	menu.CreatePopupMenu();
+	menu.AppendString(static_cast<UINT_PTR>(EMenuID::IDM_COMBOBOX_OPENFILE), L"Open file");
+	if (const auto ret = menu.TrackPopupMenu(ptCur.x, ptCur.y, m_Wnd, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD);
+		ret == static_cast<UINT_PTR>(EMenuID::IDM_COMBOBOX_OPENFILE)) {
+		::ShellExecuteW(nullptr, L"open", pwszFilePath, nullptr, nullptr, SW_SHOWNORMAL);
 	}
 }
 
